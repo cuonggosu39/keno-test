@@ -1,0 +1,165 @@
+<script type="module">
+// ===== FIREBASE =====
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCkYL3cFQb2seMm1BRX9HTpnQ1JRrUFkaE",
+  authDomain: "keno3979.firebaseapp.com",
+  projectId: "keno3979",
+  storageBucket: "keno3979.firebasestorage.app",
+  messagingSenderId: "793948728871",
+  appId: "1:793948728871:web:fa0b728f8f72e10a9fa802",
+  measurementId: "G-Q0DH0F6XE8"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// ===== UI LOGIN =====
+const loginHTML = `
+  <h2>🔒 Keno VIP</h2>
+  <input id="email" placeholder="Email"><br><br>
+  <input id="password" type="password" placeholder="Password"><br><br>
+  <button onclick="login()">Đăng nhập</button>
+`;
+
+// ===== KENO CODE =====
+let results=[];
+let index=0;
+const WINDOW=10;
+
+function parseData(){
+  let rawEl = document.getElementById("raw");
+  if(!rawEl) return []; // tránh lỗi null
+
+  let lines=rawEl.value.replace(/\u00A0/g," ").trim().split(/\n+/);
+  let out=[];
+  for(let i=0;i<lines.length;i+=2){
+    if(!lines[i+1]) break;
+    let line1=lines[i];
+    let line2=lines[i+1];
+    let date=line1.match(/\d{2}\/\d{2}\/\d{4}/)?.[0]||"";
+    let draw=line2.match(/#\d+/)?.[0]||"";
+    let nums1=line1.replace(date,"").trim().split(/\s+/).map(Number);
+    let nums2=line2.replace(draw,"").trim().split(/\s+/).map(Number);
+    let nums=[...nums1,...nums2].filter(n=>n>=1 && n<=80);
+    if(nums.length===20) out.push({date,draw,nums});
+  }
+  return out;
+}
+
+function calcStats(){
+  let freq=Array(81).fill(0);
+  let drought=Array(81).fill(0);
+  results.slice(index,index+WINDOW).forEach(r=>r.nums.forEach(n=>freq[n]++));
+  for(let n=1;n<=80;n++){
+    for(let i=index;i<Math.min(results.length,index+WINDOW);i++){
+      if(results[i].nums.includes(n)) break;
+      drought[n]++;
+    }
+  }
+  return {freq,drought};
+}
+
+function render(){
+  if(!results.length) return;
+  let cur=results[index];
+  let prev=index+1<results.length?results[index+1].nums:[];
+  let {freq,drought}=calcStats();
+
+  document.getElementById("info").innerText=`Ngày ${cur.date} – Kỳ ${cur.draw}`;
+  let tb=document.getElementById("board");
+  tb.innerHTML="";
+  let n=1;
+
+  for(let r=0;r<8;r++){
+    let tr=document.createElement("tr");
+    for(let c=0;c<10;c++){
+      let td=document.createElement("td");
+      td.textContent=n.toString().padStart(2,"0");
+
+      if(cur.nums.includes(n)) td.classList.add("hit");
+      if(prev.includes(n)) td.classList.add("prev-hit");
+
+      if(freq[n]>=6) td.classList.add("hot3");
+      else if(freq[n]>=4) td.classList.add("hot2");
+      else if(freq[n]===3) td.classList.add("hot1");
+
+      if(drought[n]>=8) td.classList.add("cold3");
+      else if(drought[n]>=6) td.classList.add("cold2");
+      else if(drought[n]>=4) td.classList.add("cold1");
+
+      tr.appendChild(td);
+      n++;
+    }
+    tb.appendChild(tr);
+  }
+}
+
+function autoResize(){
+  const vw=window.innerWidth;
+  if(vw<600){
+    document.documentElement.style.setProperty('--cell-width','50px');
+    document.documentElement.style.setProperty('--cell-height','45px');
+  } else if(vw>=1800){
+    document.documentElement.style.setProperty('--cell-width','90px');
+    document.documentElement.style.setProperty('--cell-height','60px');
+  } else {
+    document.documentElement.style.setProperty('--cell-width','75px');
+    document.documentElement.style.setProperty('--cell-height','55px');
+  }
+}
+
+function older(){if(index+1<results.length){index++;render();}}
+function newer(){if(index>0){index--;render();}}
+
+// ===== LOGIN UI (chèn vào đầu body) =====
+const loginBox = document.createElement("div");
+loginBox.innerHTML = `
+  <h2>🔒 Keno VIP</h2>
+  <input id="email" placeholder="Email"><br><br>
+  <input id="password" type="password" placeholder="Password"><br><br>
+  <button onclick="login()">Đăng nhập</button>
+`;
+document.body.prepend(loginBox);
+
+// Ẩn nội dung Keno ban đầu
+document.getElementById("board").style.display = "none";
+document.getElementById("info").style.display = "none";
+
+// ===== LOGIN FUNCTION =====
+window.login = function () {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  signInWithEmailAndPassword(auth, email, password)
+    .then(() => {
+      alert("Đăng nhập thành công");
+    })
+    .catch(e => alert("Sai tài khoản hoặc mật khẩu"));
+};
+
+// ===== CHECK LOGIN =====
+onAuthStateChanged(auth, (user) => {
+  console.log("USER:", user);
+
+  if (!user) {
+    // chưa login → chỉ hiện login
+    loginBox.style.display = "block";
+  } else {
+    // đã login → hiện Keno
+    loginBox.style.display = "none";
+
+    document.getElementById("board").style.display = "table";
+    document.getElementById("info").style.display = "block";
+
+    setTimeout(() => {
+      results = parseData();
+      autoResize();
+      render();
+      window.addEventListener('resize', autoResize);
+    }, 200);
+  }
+});
+</script>
