@@ -120,16 +120,10 @@ loginBox.innerHTML = `
   <h2>🔒 Keno VIP</h2>
   <input id="email" placeholder="Email"><br><br>
   <input id="password" type="password" placeholder="Password"><br><br>
-  <button onclick="login()">Đăng nhập</button>
+  <button id="btnLogin">Đăng nhập</button>
 `;
 document.body.prepend(loginBox);
-
-// Ẩn nội dung Keno ban đầu
-document.getElementById("board").style.display = "none";
-document.getElementById("info").style.display = "none";
-
-// ===== LOGIN FUNCTION =====
-window.login = function () {
+document.getElementById("btnLogin").addEventListener("click", () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
@@ -137,8 +131,16 @@ window.login = function () {
     .then(() => {
       alert("Đăng nhập thành công");
     })
-    .catch(e => alert("Sai tài khoản hoặc mật khẩu"));
-};
+    .catch((e) => {
+      alert("Sai tài khoản hoặc mật khẩu");
+      console.error(e);
+    });
+});
+// Ẩn nội dung Keno ban đầu
+document.getElementById("board").style.display = "none";
+document.getElementById("info").style.display = "none";
+
+// ===== LOGIN FUNCTION =====
 
 // ===== CHECK LOGIN =====
 onAuthStateChanged(auth, (user) => {
