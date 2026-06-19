@@ -1,9 +1,121 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <title>Keno VIP</title>
+<meta charset="UTF-8">
+<title>Keno – Thống kê Hot / Cold</title>
+
+<style>
+:root{
+  --cell-width:75px;
+  --cell-height:55px;
+  --font-btn:18px;
+  --font-cell:22px;
+}
+body{
+  font-family: Arial, sans-serif;
+  background:#fff;
+  margin:0;
+  padding:15px;
+  text-align:center;
+}
+h2{ margin-bottom:6px; }
+button{
+  font-size:var(--font-btn);
+  padding:8px 18px;
+  margin:6px;
+  cursor:pointer;
+  border-radius:6px;
+}
+#info{
+  font-size:22px;
+  font-weight:bold;
+  margin:10px 0;
+  white-space:pre-line;
+}
+.nav{ margin-bottom:10px; }
+
+.main-layout{
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  gap:20px;
+}
+
+#board{
+  margin:0 auto;
+  border-collapse:collapse;
+}
+#board td{
+  width:var(--cell-width);
+  height:var(--cell-height);
+  border:1px solid #aaa;
+  font-size:var(--font-cell);
+  text-align:center;
+  vertical-align:middle;
+}
+#board td:nth-child(5){ border-right:3px solid #000; }
+#board tr:nth-child(4) td{ border-bottom:3px solid #000; }
+
+.hit{ background:#4caf50; color:#fff; }
+.prev-hit{
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+}
+.hot1{ color:#ffcc80; font-weight:bold; }
+.hot2{ color:#ff9800; font-weight:bold; }
+.hot3{ color:#e65100; font-weight:bold; }
+.cold1{ color:#90caf9; }
+.cold2{ color:#1e88e5; }
+.cold3{ color:#0d47a1; font-weight:bold; }
+
+.note-box{
+  width:260px;
+  background:#fafafa;
+  padding:12px 14px;
+  border-radius:8px;
+  font-size:16px;
+  line-height:1.6;
+  text-align:left;
+}
+.note-under{
+  max-width:900px;
+  margin:14px auto 6px;
+  font-size:16px;
+  line-height:1.6;
+}
+.note-footer{
+  margin-top:8px;
+  font-size:16px;
+  font-weight:bold;
+  color:#333;
+}
+
+#loginBox{
+  margin-top:80px;
+}
+
+@media (max-width:900px){
+  .main-layout{
+    flex-direction:column;
+    align-items:center;
+  }
+  .note-box{
+    width:95%;
+  }
+}
+@media (max-width:600px){
+  :root{
+    --cell-width:50px;
+    --cell-height:45px;
+    --font-btn:22px;
+    --font-cell:16px;
+  }
+  #info{ font-size:18px; }
+}
+</style>
 </head>
+
 <body>
 
 <!-- LOGIN -->
@@ -14,14 +126,49 @@
   <button id="loginBtn">Đăng nhập</button>
 </div>
 
-<!-- KENO -->
-<div id="kenoContent" style="display:none;">
-  <h3 id="info"></h3>
-  <table id="board" border="1"></table>
+<!-- WEB KENO (GIỮ NGUYÊN) -->
+<div id="mainContent" style="display:none;">
+
+<h2>Keno – Thống kê Hot / Cold (10 kỳ gần nhất)</h2>
+<div id="info"></div>
+
+<div class="nav">
+  <button onclick="newer()">◀</button>
+  <button onclick="older()">▶</button>
 </div>
 
+<div class="main-layout">
+
+  <div class="note-box">
+    🔥 <b>HOT</b> – xuất hiện trong 10 kỳ gần nhất:<br>
+    • 7–10 lần: cam đậm<br>
+    • 5–6 lần: cam<br>
+    • 4 lần: cam nhạt
+  </div>
+
+  <table id="board"></table>
+
+  <div class="note-box">
+    ❄ <b>COLD (gan)</b> – số không xuất hiện liên tiếp:<br>
+    • ≥8 kỳ gan: xanh đậm<br>
+    • 6–7 kỳ gan: xanh<br>
+    • 4–5 kỳ gan: xanh nhạt
+  </div>
+
+</div>
+
+<div class="note-under">
+  🟢 <b>Nền xanh lá</b>: số trúng kỳ đang xem<br>
+  ▬ <b>Gạch chân</b>: số trúng kỳ liền trước
+  <div class="note-footer">
+    Kết quả thống kê chỉ mang tính chất tham khảo – Keno là trò chơi giải trí.
+  </div>
+</div>
+
+</div>
+
+<!-- FIREBASE LOGIN -->
 <script type="module">
-// ===== FIREBASE =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
@@ -29,31 +176,114 @@ const firebaseConfig = {
   apiKey: "AIzaSyCkYL3cFQb2seMm1BRX9HTpnQ1JRrUFkaE",
   authDomain: "keno3979.firebaseapp.com",
   projectId: "keno3979",
-  storageBucket: "keno3979.firebasestorage.app",
-  messagingSenderId: "793948728871",
-  appId: "1:793948728871:web:fa0b728f8f72e10a9fa802",
-  measurementId: "G-Q0DH0F6XE8"
+  appId: "1:793948728871:web:fa0b728f8f72e10a9fa802"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// ===== LOGIN =====
 document.getElementById("loginBtn").addEventListener("click", async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
-
   try {
     await signInWithEmailAndPassword(auth, email, password);
-    alert("Đăng nhập thành công");
-  } catch (e) {
+  } catch {
     alert("Sai tài khoản hoặc mật khẩu");
-    console.error(e);
   }
 });
 
-// ===== RENDER KENO =====
+onAuthStateChanged(auth, (user) => {
+  if(user){
+    document.getElementById("loginBox").style.display="none";
+    document.getElementById("mainContent").style.display="block";
+  }else{
+    document.getElementById("loginBox").style.display="block";
+    document.getElementById("mainContent").style.display="none";
+  }
+});
+</script>
+
+<!-- CODE KENO GIỮ NGUYÊN -->
+<script>
+let results = [];
+let index = 0;
+const WINDOW = 10;
+let lastApiFetch = 0;
+const API_COOLDOWN = 60 * 1000;
+let lastKnownDraw = null;
+
+async function loadFromGithub(){
+  const res = await fetch("data/latest.json?t=" + Date.now());
+  const json = await res.json();
+  return json.data.items.map(it => ({
+    draw: parseInt(it.drawCode,10),
+    date: it.openDate.split(" ")[0],
+    time: it.openDate,
+    nums: Array.from({length:20},(_,i)=>parseInt(it["num"+(i+1)],10))
+  }));
+}
+
+async function fetchApiIfNeeded(latestDraw){
+  if(Date.now() - lastApiFetch < API_COOLDOWN) return [];
+  lastApiFetch = Date.now();
+  const res = await fetch("https://veso247.vn:19901/api/keno/result/keno?page_size=30&page_index=1",{ cache:"no-store" });
+  const json = await res.json();
+  return json.data.items
+    .map(it => ({
+      draw: parseInt(it.drawCode,10),
+      date: it.openDate.split(" ")[0],
+      time: it.openDate,
+      nums: Array.from({length:20},(_,i)=>parseInt(it["num"+(i+1)],10))
+    }))
+    .filter(it => it.draw > latestDraw);
+}
+
+async function init(){
+  const gh = await loadFromGithub();
+  const newestDraw = gh[0]?.draw || 0;
+  const apiNew = await fetchApiIfNeeded(newestDraw);
+  results = [...apiNew, ...gh];
+  render();
+}
+init();
+
+async function getLatestDrawFromAPI(){
+  try{
+    const res = await fetch("https://veso247.vn:19901/api/keno/result/keno?page_size=1&page_index=1",{ cache:"no-store" });
+    const js = await res.json();
+    return parseInt(js.data.items[0].drawCode,10);
+  }catch(e){ return null; }
+}
+
+setInterval(async ()=>{
+  if(!results.length) return;
+  if(lastKnownDraw === null) lastKnownDraw = results[0].draw;
+  const latest = await getLatestDrawFromAPI();
+  if(latest && latest > lastKnownDraw) location.reload();
+},30000);
+
+function calcStats(){
+  let freq = Array(81).fill(0);
+  let drought = Array(81).fill(WINDOW);
+  const slice = results.slice(index,index+WINDOW);
+  slice.forEach(r => r.nums.forEach(n => freq[n]++));
+  slice.forEach((r,i)=>{
+    r.nums.forEach(n=>{
+      if(drought[n]===WINDOW) drought[n]=i;
+    });
+  });
+  return {freq,drought};
+}
+
 function render(){
+  if(!results.length) return;
+  const cur = results[index];
+  const prev = results[index+1]?.nums || [];
+  const {freq,drought} = calcStats();
+
+  document.getElementById("info").innerText =
+    `Ngày ${cur.date} – Kỳ #${cur.draw}`;
+
   const tb = document.getElementById("board");
   tb.innerHTML = "";
   let n = 1;
@@ -62,30 +292,28 @@ function render(){
     let tr=document.createElement("tr");
     for(let c=0;c<10;c++){
       let td=document.createElement("td");
-      td.textContent = n.toString().padStart(2,"0");
+      td.textContent=n.toString().padStart(2,"0");
+
+      if(cur.nums.includes(n)) td.classList.add("hit");
+      if(prev.includes(n)) td.classList.add("prev-hit");
+
+      if(freq[n]>=7) td.classList.add("hot3");
+      else if(freq[n]>=5) td.classList.add("hot2");
+      else if(freq[n]===4) td.classList.add("hot1");
+
+      if(drought[n]>=8) td.classList.add("cold3");
+      else if(drought[n]>=6) td.classList.add("cold2");
+      else if(drought[n]>=4) td.classList.add("cold1");
+
       tr.appendChild(td);
       n++;
     }
     tb.appendChild(tr);
   }
-
-  document.getElementById("info").innerText = "Đã login thành công 🎉";
 }
 
-// ===== CHECK LOGIN =====
-onAuthStateChanged(auth, (user) => {
-  const loginBox = document.getElementById("loginBox");
-  const kenoContent = document.getElementById("kenoContent");
-
-  if (user) {
-    loginBox.style.display = "none";
-    kenoContent.style.display = "block";
-    render();
-  } else {
-    loginBox.style.display = "block";
-    kenoContent.style.display = "none";
-  }
-});
+function older(){ if(index+1<results.length){ index++; render(); } }
+function newer(){ if(index>0){ index--; render(); } }
 </script>
 
 </body>
