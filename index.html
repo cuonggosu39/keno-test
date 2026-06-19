@@ -161,7 +161,7 @@ onAuthStateChanged(auth, (user) => {
     const res = await fetch("https://cuonggosu39.github.io/data/latest.json?t=" + Date.now());
     const json = await res.json();
 
-    results = json.data.items.map(it => ({
+    results = json.map(it => ({
       draw: it.drawCode,
       date: it.openDate.split(" ")[0],
       nums: Array.from({length:20},(_,i)=>parseInt(it["num"+(i+1)],10))
